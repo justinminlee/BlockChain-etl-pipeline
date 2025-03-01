@@ -18,3 +18,29 @@ DB_NAME = os.getenv("DB_NAME")
 
 # PostgreSQL Connection
 engine = create_engine(f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}")
+
+# Fetch data from Bitquery API
+def extract_data():
+    query = """
+    {
+      ethereum(network: ethereum) {
+        transactions(options: {limit: 100, desc: "block.timestamp.time"}) {
+          hash
+          from { address }
+          to { address }
+          value
+          gas
+          gas_price
+          block { timestamp { time } height }
+        }
+      }
+    }
+    """
+    headers = {"X-API-KEY": BITQUERY_API_KEY, "Content-Type": "application/json"}
+    response = requests.post("https://graphql.bitquery.io/", json={"query": query}, headers=headers)
+    
+    if response.status_code == 200:
+        return response.json()["data"]["ethereum"]["transactions"]
+    else:
+        print("Error fetching data:", response.text)
+        return []
