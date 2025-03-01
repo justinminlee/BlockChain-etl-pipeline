@@ -6,7 +6,7 @@ import os
 from dotenv import load_dotenv
 
 # Load the environment variables
-load_dotenv()
+load_dotenv(override=True)
 
 #Retrieve API Key and Database Credentials
 BITQUERY_API_KEY = os.getenv("BITQUERY_API_KEY")
@@ -24,23 +24,50 @@ def extract_data():
     query = """
     {
       ethereum(network: ethereum) {
-        transactions(options: {limit: 100, desc: "block.timestamp.time"}) {
+        transactions(
+          options: { desc: "block.timestamp.time" }
+          limit: 100
+        ) {
           hash
-          from { address }
-          to { address }
-          value
+          sender {
+            address
+          }
+          receiver {
+            address
+          }
+          value(in: ETH)
           gas
-          gas_price
-          block { timestamp { time } height }
+          gasPrice
+          block {
+            height
+            timestamp {
+              iso8601
+            }
+          }
         }
       }
     }
     """
-    headers = {"X-API-KEY": BITQUERY_API_KEY, "Content-Type": "application/json"}
+    
+    headers = {
+        "Authorization": f"Bearer {BITQUERY_API_KEY}", 
+        "Content-Type": "application/json"
+    }
+    
     response = requests.post("https://graphql.bitquery.io/", json={"query": query}, headers=headers)
     
+    # Print the full response for debugging
+    print("Status Code:", response.status_code)
+    print("Response Text:", response.text[:500])  # Print first 500 chars to avoid huge output
+    
     if response.status_code == 200:
-        return response.json()["data"]["ethereum"]["transactions"]
+        response_json = response.json()
+        # Check if 'data' exists in the response
+        if 'data' in response_json and 'ethereum' in response_json['data'] and 'transactions' in response_json['data']['ethereum']:
+            return response_json["data"]["ethereum"]["transactions"]
+        else:
+            print("Unexpected response structure:", response_json)
+            return []
     else:
         print("Error fetching data:", response.text)
         return []
@@ -53,7 +80,7 @@ def transform_data(transactions):
     df["to_address"] = df["to"].apply(lambda x: x["address"] if x else None)
     df["timestamp"] = df["block"].apply(lambda x: x["timestamp"]["time"] if x else None)
     df["block_height"] = df["block"].apply(lambda x: x["height"] if x else None)
-    df["value"] = df["value"].astype(float) / 1e18  # Convert Wei to ETH
+    df["value"] = df["value"].astype(float) / 1e18  
     df.drop(columns=["from", "to", "block"], inplace=True)
     return df
 
@@ -61,6 +88,7 @@ def transform_data(transactions):
 def load_data_to_postgres(df):
     df.to_sql("transactions", engine, if_exists="append", index=False)
     print("Data loaded successfully into PostgreSQL!")
+
     
 # Run ETL pipeline
 def run_etl():
