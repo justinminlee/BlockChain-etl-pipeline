@@ -44,3 +44,16 @@ def extract_data():
     else:
         print("Error fetching data:", response.text)
         return []
+
+# Transform data
+def transform_data(transactions):
+    df = pd.DataFrame(transactions)
+    df.rename(columns={"hash": "tx_hash"}, inplace=True)
+    df["from_address"] = df["from"].apply(lambda x: x["address"] if x else None)
+    df["to_address"] = df["to"].apply(lambda x: x["address"] if x else None)
+    df["timestamp"] = df["block"].apply(lambda x: x["timestamp"]["time"] if x else None)
+    df["block_height"] = df["block"].apply(lambda x: x["height"] if x else None)
+    df["value"] = df["value"].astype(float) / 1e18  # Convert Wei to ETH
+    df.drop(columns=["from", "to", "block"], inplace=True)
+    return 
+
