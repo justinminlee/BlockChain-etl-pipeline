@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 # Load the environment variables
 load_dotenv()
 
-# Retrieve API Key and Database Credentials
+#Retrieve API Key and Database Credentials
 BITQUERY_API_KEY = os.getenv("BITQUERY_API_KEY")
 DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
@@ -55,5 +55,22 @@ def transform_data(transactions):
     df["block_height"] = df["block"].apply(lambda x: x["height"] if x else None)
     df["value"] = df["value"].astype(float) / 1e18  # Convert Wei to ETH
     df.drop(columns=["from", "to", "block"], inplace=True)
-    return 
+    return df
 
+# Function to load data into PostgreSQL
+def load_data_to_postgres(df):
+    df.to_sql("transactions", engine, if_exists="append", index=False)
+    print("Data loaded successfully into PostgreSQL!")
+    
+# Run ETL pipeline
+def run_etl():
+    print("Running ETL Pipeline...")
+    transactions = extract_data()
+    if transactions:
+        df = transform_data(transactions)
+        load_data_to_postgres(df)
+    print("ETL Pipeline Completed!")
+
+# Execute pipeline
+if __name__ == "__main__":
+    run_etl()
