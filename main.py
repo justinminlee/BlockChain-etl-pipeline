@@ -22,27 +22,20 @@ engine = create_engine(f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT
 # Fetch data from Bitquery API
 def extract_data():
     query = """
-    {
-      ethereum(network: ethereum) {
-        transactions(
-          options: { desc: "block.timestamp.time" }
-          limit: 100
-        ) {
-          hash
-          sender {
-            address
+    query {
+      EVM(dataset: combined, network: eth) {
+        Transactions(limit: {count: 10}, orderBy: {descending: Block_Time}) {
+          Transaction {
+            Hash
+            From
+            To
+            Value
+            Gas
+            GasPrice
           }
-          receiver {
-            address
-          }
-          value(in: ETH)
-          gas
-          gasPrice
-          block {
-            height
-            timestamp {
-              iso8601
-            }
+          Block {
+            Number
+            Time
           }
         }
       }
@@ -54,17 +47,21 @@ def extract_data():
         "Content-Type": "application/json"
     }
     
-    response = requests.post("https://graphql.bitquery.io/", json={"query": query}, headers=headers)
+    # Note the different endpoint URL
+    response = requests.post("https://streaming.bitquery.io/graphql", json={"query": query}, headers=headers)
     
-    # Print the full response for debugging
     print("Status Code:", response.status_code)
-    print("Response Text:", response.text[:500])  # Print first 500 chars to avoid huge output
+    print("Response Text:", response.text[:500])
     
     if response.status_code == 200:
         response_json = response.json()
-        # Check if 'data' exists in the response
-        if 'data' in response_json and 'ethereum' in response_json['data'] and 'transactions' in response_json['data']['ethereum']:
-            return response_json["data"]["ethereum"]["transactions"]
+        # Add a check for null data
+        if response_json.get('data') is None:
+            print("API returned null data with errors:", response_json.get('errors'))
+            return []
+        
+        if 'EVM' in response_json['data'] and 'Transactions' in response_json['data']['EVM']:
+            return response_json["data"]["EVM"]["Transactions"]
         else:
             print("Unexpected response structure:", response_json)
             return []
@@ -82,11 +79,13 @@ def transform_data(transactions):
     df["block_height"] = df["block"].apply(lambda x: x["height"] if x else None)
     df["value"] = df["value"].astype(float) / 1e18  
     df.drop(columns=["from", "to", "block"], inplace=True)
+    print("Data transformed successfully!")
+    print(df)
     return df
 
 # Function to load data into PostgreSQL
 def load_data_to_postgres(df):
-    df.to_sql("transactions", engine, if_exists="append", index=False)
+    df.to_sql("ethereum_transactions", engine, if_exists="append", index=False)
     print("Data loaded successfully into PostgreSQL!")
 
     
