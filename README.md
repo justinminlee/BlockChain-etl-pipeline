@@ -66,7 +66,7 @@ The script will extract data from the Bitquery API, transform it, and load it in
      │
      ├── main.py                 # Main ETL script
      ├── requirements.txt        # Python dependencies
-     ├── init_db.sql             # SQL script to initialize the database
+     ├── init_db.sql             # SQL script to initialise the database
      ├── .env.example            # Example environment variables file
      └── README.md               # Project documentation
    ```
@@ -100,7 +100,7 @@ The pipeline uses Python's built-in logging module to record events and errors. 
 ## Future Enhancements
 <li><strong>Automated Scheduling</strong>: Integrate with tools like Apache Airflow to schedule regular ETL runs.
 <li><strong>Data Validation</strong>: Implement data validation frameworks such as Great Expectations to ensure data quality.
-<li><strong>Scalability</strong>: Optimize the ETL process to handle larger datasets and improve performance.
+<li><strong>Scalability</strong>: Optimise the ETL process to handle larger datasets and improve performance.
   
 ## Contributing
 Contributions are welcome! Please fork the repository and create a pull request with your changes. Ensure that your code adheres to the project's coding standards and includes appropriate tests.
