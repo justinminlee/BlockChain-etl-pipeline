@@ -28,7 +28,7 @@ def extract_data():
         dexTrades(
           options: {desc: "block.height", limit: 10}
           exchangeName: {in: ["Pancake", "Pancake v2"]}
-          date: {after: "2023-10-01"}  # Keep recent date for better performance
+          date: {after: "2025-03-01"}  
         ) {
           block {
             height
@@ -37,16 +37,16 @@ def extract_data():
             date
           }
           buyAmount
-          buyAmountInUSD: buyAmount(in: USD)  # Keep USD only
+          buyAmountInUSD: buyAmount(in: USD) 
           buyCurrency {
             symbol
           }
           sellAmount
-          sellAmountInUSD: sellAmount(in: USD)  # Keep USD only
+          sellAmountInUSD: sellAmount(in: USD)
           sellCurrency {
             symbol
           }
-          tradeAmount(in: USD)  # Keep USD only
+          tradeAmountInUSD: tradeAmount(in: USD)
           transaction {
             hash
             gasValue
@@ -98,12 +98,12 @@ def transform_data(trades):
             data.append({
                 "date": trade["date"]["date"],
                 "buy_amount": trade["buyAmount"],
-                "buy_amount_in_usd": trade["buyAmountInUSD"],  # Use USD instead of AUD
+                "buy_amount_in_usd": trade["buyAmountInUSD"],
                 "buy_currency": trade["buyCurrency"]["symbol"] if trade.get("buyCurrency") else None,
                 "sell_amount": trade["sellAmount"],
-                "sell_amount_in_usd": trade["sellAmountInUSD"],  # Use USD instead of AUD
+                "sell_amount_in_usd": trade["sellAmountInUSD"],
                 "sell_currency": trade["sellCurrency"]["symbol"] if trade.get("sellCurrency") else None,
-                "trade_amount": trade["tradeAmount(in: USD)"],
+                "trade_amount_in_usd": trade["tradeAmountInUSD"],  
                 "transaction_hash": trade["transaction"]["hash"],
                 "gas_value": trade["transaction"]["gasValue"],
                 "gas_price": trade["transaction"]["gasPrice"],
@@ -115,6 +115,7 @@ def transform_data(trades):
     df = pd.DataFrame(data)
     print("Data transformed successfully!")
     return df
+
 
 
 # Tests the PostgreSQL connection.
