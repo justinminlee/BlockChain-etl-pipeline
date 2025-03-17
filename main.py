@@ -157,8 +157,8 @@ def load_data_to_db(df):
         for _, row in df.iterrows():
             cursor.execute("""
                 INSERT INTO dex_trades (
-                    date, buy_amount, buy_amount_in_aud, buy_currency, 
-                    sell_amount, sell_amount_in_aud, sell_currency, 
+                    date, buy_amount, buy_amount_in_usd, buy_currency, 
+                    sell_amount, sell_amount_in_usd, sell_currency, 
                     trade_amount, transaction_hash, gas_value, gas_price, gas_used
                 ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (transaction_hash) DO NOTHING;
@@ -167,10 +167,11 @@ def load_data_to_db(df):
         conn.commit()
         cursor.close()
         conn.close()
-        print("Data successfully saved to PostgreSQL!")
+        print("✅ Data successfully saved to PostgreSQL!")
 
     except Exception as e:
-        print("Error saving to database:", e)
+        print("❌ Error saving to database:", e)
+
 
     
 # Run the ETL process
