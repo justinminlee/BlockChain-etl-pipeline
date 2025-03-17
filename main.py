@@ -81,17 +81,34 @@ def extract_data():
         return []
 
 # Transform data
-def transform_data(transactions):
-    df = pd.DataFrame(transactions)
-    df.rename(columns={"hash": "tx_hash"}, inplace=True)
-    df["from_address"] = df["from"].apply(lambda x: x["address"] if x else None)
-    df["to_address"] = df["to"].apply(lambda x: x["address"] if x else None)
-    df["timestamp"] = df["block"].apply(lambda x: x["timestamp"]["time"] if x else None)
-    df["block_height"] = df["block"].apply(lambda x: x["height"] if x else None)
-    df["value"] = df["value"].astype(float) / 1e18  
-    df.drop(columns=["from", "to", "block"], inplace=True)
+def transform_data(trades):
+    """Transforms raw API data into a structured DataFrame."""
+    if not trades:
+        print("No transactions to transform.")
+        return pd.DataFrame()
+
+    data = []
+    for trade in trades:
+        try:
+            data.append({
+                "date": trade["date"]["date"],
+                "buy_amount": trade["buyAmount"],
+                "buy_amount_in_aud": trade["buyAmountInAUD"],
+                "buy_currency": trade["buyCurrency"]["symbol"] if trade.get("buyCurrency") else None,
+                "sell_amount": trade["sellAmount"],
+                "sell_amount_in_aud": trade["sellAmountInAUD"],
+                "sell_currency": trade["sellCurrency"]["symbol"] if trade.get("sellCurrency") else None,
+                "trade_amount": trade["tradeAmount(in: AUD)"],
+                "transaction_hash": trade["transaction"]["hash"],
+                "gas_value": trade["transaction"]["gasValue"],
+                "gas_price": trade["transaction"]["gasPrice"],
+                "gas_used": trade["transaction"]["gas"]
+            })
+        except KeyError as e:
+            print(f"Missing key {e} in trade:", trade)
+
+    df = pd.DataFrame(data)
     print("Data transformed successfully!")
-    print(df)
     return df
 
 # Function to load data into PostgreSQL
