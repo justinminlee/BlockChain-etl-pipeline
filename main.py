@@ -19,9 +19,8 @@ DB_NAME = os.getenv("DB_NAME")
 # PostgreSQL Connection
 engine = create_engine(f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}")
 
-# Fetch data from Bitquery API
+# Fetches transaction data from Bitquery V2 API.
 def extract_data():
-    """Fetches transaction data from Bitquery V2 API."""
     query = """
     query {
       ethereum(network: bsc) {
@@ -80,9 +79,8 @@ def extract_data():
         print("Unexpected response structure:", response_json)
         return []
 
-# Transform data
+# Transforms raw API data into a structured DataFrame.
 def transform_data(trades):
-    """Transforms raw API data into a structured DataFrame."""
     if not trades:
         print("No transactions to transform.")
         return pd.DataFrame()
@@ -111,21 +109,44 @@ def transform_data(trades):
     print("Data transformed successfully!")
     return df
 
-# Function to load data into PostgreSQL
-def load_data_to_postgres(df):
-    df.to_sql("ethereum_transactions", engine, if_exists="append", index=False)
-    print("Data loaded successfully into PostgreSQL!")
+# Inserts transformed data into PostgreSQL database.
+def load_data_to_db(df):
+    if df.empty:
+        print("No data to save.")
+        return
+
+    try:
+        # Connect to PostgreSQL
+        conn = psycopg2.connect(
+            dbname=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            host=DB_HOST,
+            port=DB_PORT
+        )
+        cursor = conn.cursor()
+
+        # Insert data (Avoid duplicates using ON CONFLICT)
+        for _, row in df.iterrows():
+            cursor.execute("""
+                INSERT INTO dex_trades (
+                    date, buy_amount, buy_amount_in_aud, buy_currency, 
+                    sell_amount, sell_amount_in_aud, sell_currency, 
+                    trade_amount, transaction_hash, gas_value, gas_price, gas_used
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (transaction_hash) DO NOTHING;
+            """, tuple(row))
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+        print("Data successfully saved to PostgreSQL!")
+
+    except Exception as e:
+        print("Error saving to database:", e)
 
     
-# Run ETL pipeline
-def run_etl():
-    print("Running ETL Pipeline...")
-    transactions = extract_data()
-    if transactions:
-        df = transform_data(transactions)
-        load_data_to_postgres(df)
-    print("ETL Pipeline Completed!")
-
-# Execute pipeline
-if __name__ == "__main__":
-    run_etl()
+# Run the ETL process
+trades = extract_data()
+df = transform_data(trades)
+load_data_to_db(df)
