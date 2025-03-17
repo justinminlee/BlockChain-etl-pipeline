@@ -4,6 +4,7 @@ import pandas as pd
 from sqlalchemy import create_engine
 import os
 from dotenv import load_dotenv
+import psycopg2
 
 # Load the environment variables
 load_dotenv(override=True)
@@ -21,28 +22,32 @@ engine = create_engine(f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT
 
 # Fetches transaction data from Bitquery V2 API.
 def extract_data():
+    """Fetches transaction data from Bitquery V2 API."""
     query = """
     query {
       ethereum(network: bsc) {
         dexTrades(
           options: {desc: "block.height", limit: 10}
           exchangeName: {in: ["Pancake", "Pancake v2"]}
-          date: {after: "2021-04-28"}
+          date: {after: "2023-10-01"}  # Keep recent date for better performance
         ) {
+          block {
+            height
+          }
           date {
             date
           }
           buyAmount
-          buyAmountInAUD: buyAmount(in: AUD)
+          buyAmountInUSD: buyAmount(in: USD)  # Keep USD only
           buyCurrency {
             symbol
           }
           sellAmount
-          sellAmountInAUD: sellAmount(in: AUD)
+          sellAmountInUSD: sellAmount(in: USD)  # Keep USD only
           sellCurrency {
             symbol
           }
-          tradeAmount(in: AUD)
+          tradeAmount(in: USD)  # Keep USD only
           transaction {
             hash
             gasValue
@@ -53,22 +58,24 @@ def extract_data():
       }
     }
     """
-    
+
     headers = {
         "Authorization": f"Bearer {BITQUERY_API_KEY}",
         "Content-Type": "application/json"
     }
     
-    response = requests.post("https://streaming.bitquery.io/graphql", json={"query": query}, headers=headers)
+    response = requests.post("https://graphql.bitquery.io", json={"query": query}, headers=headers)
 
     print("Status Code:", response.status_code)
+    print("Full Response:", response.text[:1000])  # Print first 1000 characters of response
+
     if response.status_code != 200:
         print("Error fetching data:", response.text)
         return []
 
     response_json = response.json()
 
-    # Error Handling
+    # Check for errors in the API response
     if response_json.get('data') is None:
         print("API returned null data with errors:", response_json.get('errors'))
         return []
@@ -78,6 +85,7 @@ def extract_data():
     else:
         print("Unexpected response structure:", response_json)
         return []
+
 
 # Transforms raw API data into a structured DataFrame.
 def transform_data(trades):
@@ -108,6 +116,25 @@ def transform_data(trades):
     df = pd.DataFrame(data)
     print("Data transformed successfully!")
     return df
+
+# Tests the PostgreSQL connection.
+def test_db_connection():
+    try:
+        conn = psycopg2.connect(
+            dbname=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            host=DB_HOST,
+            port=DB_PORT
+        )
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1;")
+        conn.commit()
+        cursor.close()
+        conn.close()
+        print("✅ PostgreSQL database connected successfully!")
+    except Exception as e:
+        print("❌ Database connection failed:", e)
 
 # Inserts transformed data into PostgreSQL database.
 def load_data_to_db(df):
@@ -149,4 +176,5 @@ def load_data_to_db(df):
 # Run the ETL process
 trades = extract_data()
 df = transform_data(trades)
+test_db_connection()
 load_data_to_db(df)
