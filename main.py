@@ -21,21 +21,34 @@ engine = create_engine(f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT
 
 # Fetch data from Bitquery API
 def extract_data():
+    """Fetches transaction data from Bitquery V2 API."""
     query = """
     query {
-      EVM(dataset: combined, network: eth) {
-        Transactions(limit: {count: 10}, orderBy: {descending: Block_Time}) {
-          Transaction {
-            Hash
-            From
-            To
-            Value
-            Gas
-            GasPrice
+      ethereum(network: bsc) {
+        dexTrades(
+          options: {desc: "block.height", limit: 10}
+          exchangeName: {in: ["Pancake", "Pancake v2"]}
+          date: {after: "2021-04-28"}
+        ) {
+          date {
+            date
           }
-          Block {
-            Number
-            Time
+          buyAmount
+          buyAmountInAUD: buyAmount(in: AUD)
+          buyCurrency {
+            symbol
+          }
+          sellAmount
+          sellAmountInAUD: sellAmount(in: AUD)
+          sellCurrency {
+            symbol
+          }
+          tradeAmount(in: AUD)
+          transaction {
+            hash
+            gasValue
+            gasPrice
+            gas
           }
         }
       }
@@ -43,30 +56,28 @@ def extract_data():
     """
     
     headers = {
-        "Authorization": f"Bearer {BITQUERY_API_KEY}", 
+        "Authorization": f"Bearer {BITQUERY_API_KEY}",
         "Content-Type": "application/json"
     }
     
-    # Note the different endpoint URL
     response = requests.post("https://streaming.bitquery.io/graphql", json={"query": query}, headers=headers)
-    
+
     print("Status Code:", response.status_code)
-    print("Response Text:", response.text[:500])
-    
-    if response.status_code == 200:
-        response_json = response.json()
-        # Add a check for null data
-        if response_json.get('data') is None:
-            print("API returned null data with errors:", response_json.get('errors'))
-            return []
-        
-        if 'EVM' in response_json['data'] and 'Transactions' in response_json['data']['EVM']:
-            return response_json["data"]["EVM"]["Transactions"]
-        else:
-            print("Unexpected response structure:", response_json)
-            return []
-    else:
+    if response.status_code != 200:
         print("Error fetching data:", response.text)
+        return []
+
+    response_json = response.json()
+
+    # Error Handling
+    if response_json.get('data') is None:
+        print("API returned null data with errors:", response_json.get('errors'))
+        return []
+    
+    if 'ethereum' in response_json['data'] and 'dexTrades' in response_json['data']['ethereum']:
+        return response_json["data"]["ethereum"]["dexTrades"]
+    else:
+        print("Unexpected response structure:", response_json)
         return []
 
 # Transform data
