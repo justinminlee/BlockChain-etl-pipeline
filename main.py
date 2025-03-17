@@ -22,7 +22,6 @@ engine = create_engine(f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT
 
 # Fetches transaction data from Bitquery V2 API.
 def extract_data():
-    """Fetches transaction data from Bitquery V2 API."""
     query = """
     query {
       ethereum(network: bsc) {
@@ -99,12 +98,12 @@ def transform_data(trades):
             data.append({
                 "date": trade["date"]["date"],
                 "buy_amount": trade["buyAmount"],
-                "buy_amount_in_aud": trade["buyAmountInAUD"],
+                "buy_amount_in_usd": trade["buyAmountInUSD"],  # Use USD instead of AUD
                 "buy_currency": trade["buyCurrency"]["symbol"] if trade.get("buyCurrency") else None,
                 "sell_amount": trade["sellAmount"],
-                "sell_amount_in_aud": trade["sellAmountInAUD"],
+                "sell_amount_in_usd": trade["sellAmountInUSD"],  # Use USD instead of AUD
                 "sell_currency": trade["sellCurrency"]["symbol"] if trade.get("sellCurrency") else None,
-                "trade_amount": trade["tradeAmount(in: AUD)"],
+                "trade_amount": trade["tradeAmount(in: USD)"],
                 "transaction_hash": trade["transaction"]["hash"],
                 "gas_value": trade["transaction"]["gasValue"],
                 "gas_price": trade["transaction"]["gasPrice"],
@@ -116,6 +115,7 @@ def transform_data(trades):
     df = pd.DataFrame(data)
     print("Data transformed successfully!")
     return df
+
 
 # Tests the PostgreSQL connection.
 def test_db_connection():
