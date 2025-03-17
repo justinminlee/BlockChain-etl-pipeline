@@ -75,14 +75,16 @@ The script will extract data from the Bitquery API, transform it, and load it in
 
 ### The ethereum_transactions table schema:
 
-  <li><strong>tx_hash (VARCHAR)</strong>: Transaction hash (Primary Key) </li>
-  <li><strong>from_address (VARCHAR)</strong>: Sender's address </li>
-  <li><strong>to_address (VARCHAR)</strong>: Receiver's address </li>
-  <li><strong>value (NUMERIC)</strong>: Transaction value in Ether </li>
-  <li><strong>gas (NUMERIC)</strong>: Gas used for the transaction </li>
-  <li><strong>gas_price (NUMERIC)</strong>: Gas price in Wei </li>
-  <li><strong>block_height (INTEGER)</strong>: Block number containing the transaction </li>
-  <li><strong>timestamp (TIMESTAMP)</strong>: Transaction timestamp </li>
+| Column Name      | Data Type  | Description                          |
+|-----------------|-----------|--------------------------------------|
+| `tx_hash`       | VARCHAR   | Transaction hash (Primary Key)       |
+| `from_address`  | VARCHAR   | Sender's address                     |
+| `to_address`    | VARCHAR   | Receiver's address                   |
+| `value`        | NUMERIC   | Transaction value in Ether           |
+| `gas`          | NUMERIC   | Gas used for the transaction         |
+| `gas_price`    | NUMERIC   | Gas price in Wei                     |
+| `block_height` | INTEGER   | Block number containing the transaction |
+| `timestamp`    | TIMESTAMP | Transaction timestamp                 |
 
 ## Error Handling
 The ETL pipeline includes basic error handling:
